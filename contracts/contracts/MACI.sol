@@ -71,14 +71,11 @@ contract MACI is IMACI, Params, Utilities, Ownable {
   /// balance per user
   InitialVoiceCreditProxy public immutable initialVoiceCreditProxy;
 
+  // @notice The object that stores all Public Keys that have selected to use Delegators
+  address[] public withDelegators;
 
-// @notice The object that stores all Public Keys that have selected to use Delegators
-    PubKey[] public withDelegators;
-
-    /// @notice A mapping between the Public Key hash and a embedding hash
-    mapping(uint256 => uint256) public delegatorEmbeddingHashes;
-
-
+  /// @notice A mapping between the address and a embedding hash
+  mapping(address => uint256) public delegatorEmbeddingHashes;
 
   /// @notice A struct holding the addresses of poll, mp and tally
   struct PollContracts {
@@ -160,39 +157,31 @@ contract MACI is IMACI, Params, Utilities, Ownable {
     if (hash2([uint256(1), uint256(1)]) == 0) revert PoseidonHashLibrariesNotLinked();
   }
 
-        /// @notice Gets the embedding hash for a given PubKey
-    function getDelegatorEmbeddingHash(PubKey memory _pubKey) public view returns (uint256) {
-        bytes32 keccakPubKey = hashPubKey(_pubKey);
-        require(delegatorEmbeddingHashes[keccakPubKey] != 0, "PubKey does not have an embedding set up");
-        return delegatorEmbeddingHashes[keccakPubKey];
-    }
+  /// @notice Gets the embedding hash for a given PubKey
+  function getDelegatorEmbeddingHash(address memory _address) public view returns (uint256) {
+    require(delegatorEmbeddingHashes[_address] != 0, "PubKey does not have an embedding set up");
+    return delegatorEmbeddingHashes[_address];
+  }
 
-    /// @notice Adds a delegator with its embedding hash and signature
-    function addDelegator(PubKey memory _pubKey, uint256 _delegatorEmbeddingHash, uint256[3] memory _signature) public {
-        bytes32 keccakPubKey = hashPubKey(_pubKey);
+  /// @notice Adds a delegator with its embedding hash and signature
+  function addDelegator(uint256 _delegatorEmbeddingHash, uint256[3] memory _signature) public {
+    require(delegatorEmbeddingHashes[msg.sender] == 0, "Delegator already exists");
 
-        // TODO: Check the signature is valid from the _pubKey over the _delegatorEmbeddingHash
-        // To make sure this is authenticated
+    withDelegators.push(msg.sender);
+    delegatorEmbeddingHashes[msg.sender] = _delegatorEmbeddingHash;
+  }
 
-        require(delegatorEmbeddingHashes[keccakPubKey] == 0, "Delegator already exists");
+  /// @notice Removes a delegator
+  function removeDelegator() public {
+    // Check if delegator exists
+    require(delegatorEmbeddingHashes[msg.sender] != 0, "Delegator does not exist");
 
-        withDelegators.push(_pubKey);
-        delegatorEmbeddingHashes[keccakPubKey] = _delegatorEmbeddingHash;
-    }
+    // Remove from the mapping
+    delete delegatorEmbeddingHashes[msg.sender];
 
-    /// @notice Removes a delegator
-    function removeDelegator(PubKey memory _pubKey) public {
-        bytes32 keccakPubKey = hashPubKey(_pubKey);
-
-        // Check if delegator exists
-        require(delegatorEmbeddingHashes[keccakPubKey] != 0, "Delegator does not exist");
-
-        // Remove from the mapping
-        delete delegatorEmbeddingHashes[keccakPubKey];
-
-        // We keep withDelegators the same, as we check if a delegator is registered
-        // if `delegatorEmbeddingHashes` is not null
-    }
+    // We keep withDelegators the same, as we check if a delegator is registered
+    // if `delegatorEmbeddingHashes` is not null
+  }
 
   /// @notice Allows any eligible user sign up. The sign-up gatekeeper should prevent
   /// double sign-ups or ineligible users from doing so.  This function will
@@ -256,16 +245,20 @@ contract MACI is IMACI, Params, Utilities, Ownable {
   /// @return pollAddr a new Poll contract address
   function deployPoll(
     uint256 _duration,
-    uint256 _voteContextEmbeddingHash,
+    //    uint256 _voteContextEmbeddingHash, // TODO - MAKE ACTIVE TO MODIFY FROM GO
     TreeDepths memory _treeDepths,
     PubKey memory _coordinatorPubKey,
     address _verifier,
-    address _autoTallyVerifier,
-    address _autoVoteVerifier,
+    //    address _autoTallyVerifier, // TODO - MAKE ACTIVE TO MODIFY FROM GO
+    //    address _autoVoteVerifier, // TODO - MAKE ACTIVE TO MODIFY FROM GO
     address _vkRegistry,
     bool useSubsidy
   ) public virtual onlyOwner returns (PollContracts memory pollAddr) {
-      // TODO - update MACI to work with new poll setup
+    uint256 _voteContextEmbeddingHash = 0;
+    address _autoTallyVerifier = address(0);
+    address _autoVoteVerifier = address(0);
+
+    // TODO - update MACI to work with new poll setup
     // cache the poll to a local variable so we can increment it
     uint256 pollId = nextPollId;
 

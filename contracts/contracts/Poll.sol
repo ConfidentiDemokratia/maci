@@ -73,16 +73,13 @@ contract Poll is Params, Utilities, SnarkCommon, Ownable, EmptyBallotRoots, IPol
   uint256 public voteContextHash;
 
   /// @notice Delegator automated voting information by public key
-  /// Instead of using PubKey, we use Keccak(PubKey) for indexing
   /// @dev to be removed with a hash of the merkle tree of votes
-  mapping(uint256 => DelegatorAI) public delegatorVotes;
+  mapping(address => DelegatorAI) public delegatorVotes;
 
   /// @notice Structure for holding Delegator automated voting information
   struct DelegatorAI {
-    uint256 embeddingHash; // Identifies the user persona; coordinator has the full version
-    uint256 currentVote; // Current Vote in Plaintext TODO - remove in favour of encrypted version
-    uint256 currentVoteEnc; // Encrypted and salted vote to the User Public Key
-    uint256 hasVoted; // 1 if the user has voted themselves, otherwise 0
+    uint256 encVote; // Encrypted and salted vote to the User Public Key
+    uint256 hasPersonallyVoted; // 1 if the user has voted themselves, otherwise 0
   }
 
   /// @notice Contract to verify delegator votes using zk-SNARKs
@@ -192,21 +189,19 @@ contract Poll is Params, Utilities, SnarkCommon, Ownable, EmptyBallotRoots, IPol
   /// @param _proof zk-SNARK proof
   /// @param userPublicKey User's public key
   function submitAutoDelegatorVote(
-    uint256 _currentVote,
-    uint256 _currentVoteEnc,
     uint256 _encVote,
     uint256[5] calldata _proof,
-    PubKey calldata userPublicKey
+    address _toVoteFor
   ) external isWithinVotingDeadline {
     // Ensure the delegator is registered
-    require(extContracts.maci.getDelegatorEmbdeingHashes(userPublicKey) != 0, "Delegator not registered");
+    require(extContracts.maci.getDelegatorEmbdeingHashes(_toVoteFor) != 0, "Delegator not registered");
 
-    uint256 keccakPubKey = hashPubKey(_pubKey);
+    uint256 delegatorHash = extContracts.maci.getDelegatorEmbdeingHashes(_toVoteFor);
 
-    DelegatorAI storage delegator = extContracts.maci.getDelegatorEmbdeingHashes(userPublicKey);
+    DelegatorAI storage delegator = delegatorVotes[_toVoteFor];
 
     // Prevent voting when original user has voted
-    require(delegator.hasVoted == 0, "Real user has already voted");
+    require(delegator.hasPersonallyVoted == 0, "Real user has already voted");
 
     // Verification logic...
     require(
@@ -215,8 +210,7 @@ contract Poll is Params, Utilities, SnarkCommon, Ownable, EmptyBallotRoots, IPol
     );
 
     // Record the vote
-    delegator.currentVote = _currentVote;
-    delegator.currentVoteEnc = _currentVoteEnc;
+    delegator.encVote = _encVote;
   }
 
   function getHashOfEncVotes() public view returns (uint256) {
@@ -230,9 +224,9 @@ contract Poll is Params, Utilities, SnarkCommon, Ownable, EmptyBallotRoots, IPol
 
       // Consider only delegators who have voted
       // And whose owners did not vote
-      if (delegator.currentVoteEnc != 0 && delegator.hasVoted == 0) {
+      if (delegator.encVote != 0 && delegator.hasPersonallyVoted == 0) {
         // Chain the hash with the currentVoteEnc
-        hashChain = uint256(keccak256(abi.encodePacked(hashChain, delegator.currentVoteEnc)));
+        hashChain = uint256(keccak256(abi.encodePacked(hashChain, delegator.encVote)));
       }
     }
 
@@ -268,7 +262,7 @@ contract Poll is Params, Utilities, SnarkCommon, Ownable, EmptyBallotRoots, IPol
     uint256 pubKeyHash = hashPubKey(_encPubKey);
 
     // Mark the delegator as having voted
-    delegatorVotes[pubKeyHash].hasVoted = 1;
+    delegatorVotes[msg.sender].hasPersonallyVoted = 1;
 
     // we check that we do not exceed the max number of messages
     if (numMessages >= maxValues.maxMessages) revert TooManyMessages();
