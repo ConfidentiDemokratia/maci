@@ -71,6 +71,15 @@ contract MACI is IMACI, Params, Utilities, Ownable {
   /// balance per user
   InitialVoiceCreditProxy public immutable initialVoiceCreditProxy;
 
+
+// @notice The object that stores all Public Keys that have selected to use Delegators
+    PubKey[] public withDelegators;
+
+    /// @notice A mapping between the Public Key hash and a embedding hash
+    mapping(uint256 => uint256) public delegatorEmbeddingHashes;
+
+
+
   /// @notice A struct holding the addresses of poll, mp and tally
   struct PollContracts {
     address poll;
@@ -151,6 +160,40 @@ contract MACI is IMACI, Params, Utilities, Ownable {
     if (hash2([uint256(1), uint256(1)]) == 0) revert PoseidonHashLibrariesNotLinked();
   }
 
+        /// @notice Gets the embedding hash for a given PubKey
+    function getDelegatorEmbeddingHash(PubKey memory _pubKey) public view returns (uint256) {
+        bytes32 keccakPubKey = hashPubKey(_pubKey);
+        require(delegatorEmbeddingHashes[keccakPubKey] != 0, "PubKey does not have an embedding set up");
+        return delegatorEmbeddingHashes[keccakPubKey];
+    }
+
+    /// @notice Adds a delegator with its embedding hash and signature
+    function addDelegator(PubKey memory _pubKey, uint256 _delegatorEmbeddingHash, uint256[3] memory _signature) public {
+        bytes32 keccakPubKey = hashPubKey(_pubKey);
+
+        // TODO: Check the signature is valid from the _pubKey over the _delegatorEmbeddingHash
+        // To make sure this is authenticated
+
+        require(delegatorEmbeddingHashes[keccakPubKey] == 0, "Delegator already exists");
+
+        withDelegators.push(_pubKey);
+        delegatorEmbeddingHashes[keccakPubKey] = _delegatorEmbeddingHash;
+    }
+
+    /// @notice Removes a delegator
+    function removeDelegator(PubKey memory _pubKey) public {
+        bytes32 keccakPubKey = hashPubKey(_pubKey);
+
+        // Check if delegator exists
+        require(delegatorEmbeddingHashes[keccakPubKey] != 0, "Delegator does not exist");
+
+        // Remove from the mapping
+        delete delegatorEmbeddingHashes[keccakPubKey];
+
+        // We keep withDelegators the same, as we check if a delegator is registered
+        // if `delegatorEmbeddingHashes` is not null
+    }
+
   /// @notice Allows any eligible user sign up. The sign-up gatekeeper should prevent
   /// double sign-ups or ineligible users from doing so.  This function will
   /// only succeed if the sign-up deadline has not passed. It also enqueues a
@@ -202,20 +245,27 @@ contract MACI is IMACI, Params, Utilities, Ownable {
 
   /// @notice Deploy a new Poll contract.
   /// @param _duration How long should the Poll last for
+  /// @param _voteContextEmbeddingHash the hash of the vote context embedding
   /// @param _treeDepths The depth of the Merkle trees
   /// @param _coordinatorPubKey The coordinator's public key
   /// @param _verifier The Verifier Contract
+  /// @param _autoTallyVerifier The Verifier Contract for Automated Tally Results
+  /// @param _autoVoteVerifier The Verifier Contract for Automated Votes
   /// @param _vkRegistry The VkRegistry Contract
   /// @param useSubsidy If true, the Poll will use the Subsidy contract
   /// @return pollAddr a new Poll contract address
   function deployPoll(
     uint256 _duration,
+    uint256 _voteContextEmbeddingHash,
     TreeDepths memory _treeDepths,
     PubKey memory _coordinatorPubKey,
     address _verifier,
+    address _autoTallyVerifier,
+    address _autoVoteVerifier,
     address _vkRegistry,
     bool useSubsidy
   ) public virtual onlyOwner returns (PollContracts memory pollAddr) {
+      // TODO - update MACI to work with new poll setup
     // cache the poll to a local variable so we can increment it
     uint256 pollId = nextPollId;
 
@@ -238,6 +288,8 @@ contract MACI is IMACI, Params, Utilities, Ownable {
 
     address p = pollFactory.deploy(
       _duration,
+      _autoVoteVerifier,
+      _voteContextEmbeddingHash,
       maxValues,
       _treeDepths,
       _coordinatorPubKey,
@@ -247,7 +299,7 @@ contract MACI is IMACI, Params, Utilities, Ownable {
     );
 
     address mp = messageProcessorFactory.deploy(_verifier, _vkRegistry, p, _owner);
-    address tally = tallyFactory.deploy(_verifier, _vkRegistry, p, mp, _owner);
+    address tally = tallyFactory.deploy(_verifier, _vkRegistry, p, mp, _owner, _autoTallyVerifier);
 
     address subsidy;
     if (useSubsidy) {

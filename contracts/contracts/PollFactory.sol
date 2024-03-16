@@ -27,6 +27,8 @@ contract PollFactory is Params, DomainObjs, IPollFactory {
   /// @inheritdoc IPollFactory
   function deploy(
     uint256 _duration,
+    uint256 _voteContextHash,
+    address _automatedVoteVerifier,
     MaxValues calldata _maxValues,
     TreeDepths calldata _treeDepths,
     PubKey calldata _coordinatorPubKey,
@@ -53,7 +55,7 @@ contract PollFactory is Params, DomainObjs, IPollFactory {
     });
 
     // deploy the poll
-    Poll poll = new Poll(_duration, _maxValues, _treeDepths, _coordinatorPubKey, extContracts);
+    Poll poll = new Poll(_duration, _voteContextHash, _automatedVoteVerifier, _maxValues, _treeDepths, _coordinatorPubKey, extContracts);
 
     // Make the Poll contract own the messageAq contract, so only it can
     // run enqueue/merge

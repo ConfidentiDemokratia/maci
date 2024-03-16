@@ -23,6 +23,11 @@ contract DomainObjs {
     uint256 y;
   }
 
+    /// @dev Returns the keccak hash of a PubKey
+    function hashPubKey(PubKey memory _pubKey) private pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(_pubKey.x, _pubKey.y)));
+    }
+
   /// @title StateLeaf
   /// @notice A MACI state leaf
   /// @dev used to represent a user's state

@@ -92,4 +92,19 @@ interface IPoll {
   /// the case that none of the messages are valid.
   /// @return The commitment to the state leaves and the ballots
   function currentSbCommitment() external view returns (uint256);
+
+/**
+ * @notice Computes the aggregated hash of all encrypted votes from delegators.
+ * This function iterates over public keys that have opted for delegator-based voting. For each key,
+ * it retrieves the associated encrypted vote and chains these votes through hashing, resulting in a single
+ * aggregated hash. This process ensures the integrity of the vote encryption, making unauthorized alterations detectable.
+ *
+ * The aggregated hash is pivotal for cryptographic verification processes, enhancing the voting system's
+ * transparency and security by ensuring the integrity of encrypted votes prior to tallying and facilitating
+ * zero-knowledge proofs or other cryptographic validations.
+ *
+ * @return uint256 The single, aggregated hash of all encrypted delegator votes, serving as a cryptographic
+ * proof of the voting data's integrity and enabling secure and transparent verification of automated voting outcomes.
+ */
+function getHashOfEncVotes() external view returns(uint256);
 }
