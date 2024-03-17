@@ -19,8 +19,6 @@ interface IPollFactory {
   /// @return The deployed Poll contract
   function deploy(
     uint256 _duration,
-    uint256 _voteContextHash,
-    address _automatedVoteVerifier,
     Params.MaxValues memory _maxValues,
     Params.TreeDepths memory _treeDepths,
     DomainObjs.PubKey memory _coordinatorPubKey,

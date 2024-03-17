@@ -30,19 +30,14 @@ const TEST_MNEMONIC = "candy maple cake sugar pudding cream honey rich smooth cr
 const NETWORKS_RPC_URL = getNetworkRpcUrls();
 const ETHERSCAN_API_KEYS = getEtherscanApiKeys();
 
-const getCommonNetworkConfig = (networkName: ESupportedChains, chainId: number, mnemonic?: string) => ({
+const getCommonNetworkConfig = (networkName: ESupportedChains, chainId: number) => ({
   url: NETWORKS_RPC_URL[networkName],
   blockGasLimit: DEFAULT_BLOCK_GAS_LIMIT,
   gasMultiplier: DEFAULT_GAS_MUL,
   gasPrice: process.env.GAS_PRICE ? Number(process.env.GAS_PRICE) : NETWORKS_DEFAULT_GAS[networkName],
   saveDeployments: true,
   chainId,
-  accounts: {
-    mnemonic: mnemonic || process.env.MNEMONIC || TEST_MNEMONIC,
-    path: "m/44'/60'/0'/0",
-    initialIndex: 0,
-    count: 20,
-  },
+  accounts: [`0x${process.env.PRIVATE_KEY}`],
 });
 
 const config: HardhatUserConfig = {
@@ -57,9 +52,11 @@ const config: HardhatUserConfig = {
   },
   defaultNetwork: "localhost",
   networks: {
+    arbitrum_sepolia: getCommonNetworkConfig(ESupportedChains.ArbitrumSepolia, EChainId.ArbitrumSepolia),
+    base_sepolia: getCommonNetworkConfig(ESupportedChains.BaseSepolia, EChainId.BaseSepolia),
     sepolia: getCommonNetworkConfig(ESupportedChains.Sepolia, EChainId.Sepolia),
     optimism_sepolia: getCommonNetworkConfig(ESupportedChains.OptimismSepolia, EChainId.OptimismSepolia),
-    coverage: getCommonNetworkConfig(ESupportedChains.Coverage, EChainId.Coverage, TEST_MNEMONIC),
+    coverage: getCommonNetworkConfig(ESupportedChains.Coverage, EChainId.Coverage),
     localhost: {
       url: "http://localhost:8545",
       loggingEnabled: false,
@@ -99,8 +96,10 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
+      [ESupportedChains.ArbitrumSepolia]: ETHERSCAN_API_KEYS[ESupportedChains.ArbitrumSepolia]!,
       [ESupportedChains.Sepolia]: ETHERSCAN_API_KEYS[ESupportedChains.Sepolia]!,
       [ESupportedChains.OptimismSepolia]: ETHERSCAN_API_KEYS[ESupportedChains.OptimismSepolia]!,
+      [ESupportedChains.BaseSepolia]: ETHERSCAN_API_KEYS[ESupportedChains.BaseSepolia]!,
     },
     customChains: [
       {
@@ -109,6 +108,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-sepolia-optimism.etherscan.io/api",
           browserURL: "https://sepolia-optimism.etherscan.io",
+        },
+      },
+      {
+        network: ESupportedChains.ArbitrumSepolia,
+        chainId: EChainId.ArbitrumSepolia,
+        urls: {
+          apiURL: "https://sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io/",
+        },
+      },
+      {
+        network: ESupportedChains.BaseSepolia,
+        chainId: EChainId.BaseSepolia,
+        urls: {
+          apiURL: "https://sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org/",
         },
       },
     ],

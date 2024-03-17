@@ -41,10 +41,9 @@ contract Tally is Ownable, SnarkCommon, CommonUtilities, Hasher {
   IPoll public immutable poll;
   IMessageProcessor public immutable messageProcessor;
 
-    IVerifier public immutable automatedVoteVerifier;
-    uint256[] public automatedResults; // Consider if this should also be renamed to reflect AutoTally if it's specifically for automated results
-    uint256 public votingOptionCount;
-
+  IVerifier public immutable automatedVoteVerifier;
+  uint256[] public automatedResults; // Consider if this should also be renamed to reflect AutoTally if it's specifically for automated results
+  uint256 public votingOptionCount;
 
   /// @notice custom errors
   error ProcessingNotComplete();
@@ -59,7 +58,13 @@ contract Tally is Ownable, SnarkCommon, CommonUtilities, Hasher {
   /// @param _vkRegistry The VkRegistry contract
   /// @param _poll The Poll contract
   /// @param _mp The MessageProcessor contract
-  constructor(address _verifier, address _vkRegistry, address _poll, address _mp, address _automatedVoteVerifier) payable {
+  constructor(
+    address _verifier,
+    address _vkRegistry,
+    address _poll,
+    address _mp,
+    address _automatedVoteVerifier
+  ) payable {
     verifier = IVerifier(_verifier);
     automatedVoteVerifier = IVerifier(_automatedVoteVerifier);
     vkRegistry = IVkRegistry(_vkRegistry);
@@ -67,27 +72,29 @@ contract Tally is Ownable, SnarkCommon, CommonUtilities, Hasher {
     messageProcessor = IMessageProcessor(_mp);
   }
 
-    /// @notice Verifies the auto-tally of automatically delegated votes.
-    /// Currently, only supports a fixed number of voting options.
-    /// @param _autoTallyResult The results of the auto-tally as an array of vote counts per option.
-    /// @param _autoTallyResultProof A SNARK proof verifying the correctness of the auto-tally.
-    /// @return isValid True if the verification passes, false otherwise.
-    function verifyAutoTallyResult(
-        uint256[] calldata _autoTallyResult,
-        uint256[6] calldata _autoTallyResultProof
-    ) public returns (bool isValid) {
-        // Check that the amount of voting options is consistent with the expected count for an auto-tally
-        require(_autoTallyResult.length == votingOptionCount, "Inconsistent voting options count for auto-tally");
+  /// @notice Verifies the auto-tally of automatically delegated votes.
+  /// Currently, only supports a fixed number of voting options.
+  /// @param _autoTallyResult The results of the auto-tally as an array of vote counts per option.
+  /// @param _autoTallyResultProof A SNARK proof verifying the correctness of the auto-tally.
+  /// @return isValid True if the verification passes, false otherwise.
+  function verifyAutoTallyResult(
+    uint256[] calldata _autoTallyResult,
+    uint256[8] calldata _autoTallyResultProof
+  ) public returns (bool isValid) {
+    // Check that the amount of voting options is consistent with the expected count for an auto-tally
+    require(_autoTallyResult.length == votingOptionCount, "Inconsistent voting options count for auto-tally");
 
-        // Compute the hash chain of automated delegator votes for the auto-tally
-        uint256 hashEncVotes = poll.getHashOfEncVotes();
+    // Compute the hash chain of automated delegator votes for the auto-tally
+    uint256 hashEncVotes = poll.getHashOfEncVotes();
 
-        // Verify the auto-tally result using the provided SNARK proof
-        isValid = automatedVoteVerifier.verify(hashEncVotes, _autoTallyResult, _autoTallyResultProof);
-        require(isValid, "Auto-tally verification failed"); // TODO - is this needed?
+    // Verify the auto-tally result using the provided SNARK proof
+    uint256 _paramHash = uint256(keccak256(abi.encode(hashEncVotes, _autoTallyResult)));
+    VerifyingKey memory verifyingKey;
+    isValid = automatedVoteVerifier.verify(_autoTallyResultProof, verifyingKey, _paramHash);
+    require(isValid, "Auto-tally verification failed"); // TODO - is this needed?
 
-        return isValid;
-    }
+    return isValid;
+  }
 
   /// @notice Pack the batch start index and number of signups into a 100-bit value.
   /// @param _numSignUps: number of signups

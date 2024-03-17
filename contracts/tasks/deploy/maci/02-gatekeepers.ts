@@ -1,4 +1,3 @@
-import { ESupportedChains } from "../../helpers/constants";
 import { ContractStorage } from "../../helpers/ContractStorage";
 import { Deployment } from "../../helpers/Deployment";
 import { EContracts, IDeployParams } from "../../helpers/types";
@@ -19,7 +18,6 @@ deployment
     const easGatekeeperContractAddress = storage.getAddress(EContracts.EASGatekeeper, hre.network.name);
     const deployFreeForAllGatekeeper = deployment.getDeployConfigField(EContracts.FreeForAllGatekeeper, "deploy");
     const deployEASGatekeeper = deployment.getDeployConfigField(EContracts.EASGatekeeper, "deploy");
-
     const skipDeployFreeForAllGatekeeper = deployFreeForAllGatekeeper === false;
     const skipDeployEASGatekeeper = deployEASGatekeeper === false;
 
@@ -40,31 +38,6 @@ deployment
         id: EContracts.FreeForAllGatekeeper,
         contract: freeFroAllGatekeeperContract,
         args: [],
-        network: hre.network.name,
-      });
-    }
-
-    const isSupportedNetwork = ![ESupportedChains.Hardhat, ESupportedChains.Coverage].includes(
-      hre.network.name as ESupportedChains,
-    );
-
-    if (!skipDeployEASGatekeeper && isSupportedNetwork) {
-      const easAddress = deployment.getDeployConfigField<string>(EContracts.EASGatekeeper, "easAddress", true);
-      const encodedSchema = deployment.getDeployConfigField<string>(EContracts.EASGatekeeper, "schema", true);
-      const attester = deployment.getDeployConfigField<string>(EContracts.EASGatekeeper, "attester", true);
-
-      const easGatekeeperContract = await deployment.deployContract(
-        EContracts.EASGatekeeper,
-        deployer,
-        easAddress,
-        attester,
-        encodedSchema,
-      );
-
-      await storage.register({
-        id: EContracts.EASGatekeeper,
-        contract: easGatekeeperContract,
-        args: [easAddress, attester, encodedSchema],
         network: hre.network.name,
       });
     }

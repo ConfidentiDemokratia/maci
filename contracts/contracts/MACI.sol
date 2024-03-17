@@ -13,6 +13,7 @@ import { Params } from "./utilities/Params.sol";
 import { TopupCredit } from "./TopupCredit.sol";
 import { Utilities } from "./utilities/Utilities.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { MockVerifier } from "./crypto/MockVerifier.sol";
 
 /// @title MACI - Minimum Anti-Collusion Infrastructure Version 1
 /// @notice A contract which allows users to sign up, and deploy new polls
@@ -157,8 +158,19 @@ contract MACI is IMACI, Params, Utilities, Ownable {
     if (hash2([uint256(1), uint256(1)]) == 0) revert PoseidonHashLibrariesNotLinked();
   }
 
+  function getDelegators() external view returns (address[] memory) {
+    uint256 length = withDelegators.length;
+    address[] memory memoryArray = new address[](length);
+
+    for (uint256 i = 0; i < length; i++) {
+      memoryArray[i] = withDelegators[i];
+    }
+
+    return memoryArray;
+  }
+
   /// @notice Gets the embedding hash for a given PubKey
-  function getDelegatorEmbeddingHash(address memory _address) public view returns (uint256) {
+  function getDelegatorEmbeddingHash(address _address) external view returns (uint256) {
     require(delegatorEmbeddingHashes[_address] != 0, "PubKey does not have an embedding set up");
     return delegatorEmbeddingHashes[_address];
   }
@@ -234,12 +246,12 @@ contract MACI is IMACI, Params, Utilities, Ownable {
 
   /// @notice Deploy a new Poll contract.
   /// @param _duration How long should the Poll last for
-  /// @param _voteContextEmbeddingHash the hash of the vote context embedding
+  // / @param _voteContextEmbeddingHash the hash of the vote context embedding
   /// @param _treeDepths The depth of the Merkle trees
   /// @param _coordinatorPubKey The coordinator's public key
   /// @param _verifier The Verifier Contract
-  /// @param _autoTallyVerifier The Verifier Contract for Automated Tally Results
-  /// @param _autoVoteVerifier The Verifier Contract for Automated Votes
+  // / @param _autoTallyVerifier The Verifier Contract for Automated Tally Results
+  // / @param _autoVoteVerifier The Verifier Contract for Automated Votes
   /// @param _vkRegistry The VkRegistry Contract
   /// @param useSubsidy If true, the Poll will use the Subsidy contract
   /// @return pollAddr a new Poll contract address
@@ -254,9 +266,8 @@ contract MACI is IMACI, Params, Utilities, Ownable {
     address _vkRegistry,
     bool useSubsidy
   ) public virtual onlyOwner returns (PollContracts memory pollAddr) {
-    uint256 _voteContextEmbeddingHash = 0;
-    address _autoTallyVerifier = address(0);
-    address _autoVoteVerifier = address(0);
+    address _autoVoteVerifier = address(new MockVerifier());
+    address _autoTallyVerifier = _autoVoteVerifier;
 
     // TODO - update MACI to work with new poll setup
     // cache the poll to a local variable so we can increment it
@@ -281,8 +292,6 @@ contract MACI is IMACI, Params, Utilities, Ownable {
 
     address p = pollFactory.deploy(
       _duration,
-      _autoVoteVerifier,
-      _voteContextEmbeddingHash,
       maxValues,
       _treeDepths,
       _coordinatorPubKey,
@@ -296,7 +305,7 @@ contract MACI is IMACI, Params, Utilities, Ownable {
 
     address subsidy;
     if (useSubsidy) {
-      subsidy = subsidyFactory.deploy(_verifier, _vkRegistry, p, mp, _owner);
+      subsidy = subsidyFactory.deploy(_verifier, _vkRegistry, p, mp, _owner, _autoTallyVerifier);
     }
 
     polls[pollId] = p;

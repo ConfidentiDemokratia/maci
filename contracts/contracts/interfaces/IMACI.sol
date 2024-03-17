@@ -31,4 +31,8 @@ interface IMACI {
   /// @notice Get the state AccQueue
   /// @return The state AccQueue
   function stateAq() external view returns (AccQueue);
+
+  function getDelegatorEmbeddingHash(address _address) external view returns (uint256);
+
+  function getDelegators() external view returns (address[] memory);
 }

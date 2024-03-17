@@ -9,7 +9,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { EmptyBallotRoots } from "./trees/EmptyBallotRoots.sol";
 import { IPoll } from "./interfaces/IPoll.sol";
 import { Utilities } from "./utilities/Utilities.sol";
-import { IVerifier } from "./interfaces/IVerifier.sol";
+import { MockVerifier } from "./crypto/MockVerifier.sol";
 
 /// @title Poll
 /// @notice A Poll contract allows voters to submit encrypted messages
@@ -83,7 +83,7 @@ contract Poll is Params, Utilities, SnarkCommon, Ownable, EmptyBallotRoots, IPol
   }
 
   /// @notice Contract to verify delegator votes using zk-SNARKs
-  IVerifier public automatedVoteVerifier;
+  MockVerifier public automatedVoteVerifier;
 
   error VotingPeriodOver();
   error VotingPeriodNotOver();
@@ -104,15 +104,12 @@ contract Poll is Params, Utilities, SnarkCommon, Ownable, EmptyBallotRoots, IPol
   /// @notice Each MACI instance can have multiple Polls.
   /// When a Poll is deployed, its voting period starts immediately.
   /// @param _duration The duration of the voting period, in seconds
-  /// @param _voteContextHash The hash of the embedding of the vote context
   /// @param _maxValues The maximum number of messages and vote options
   /// @param _treeDepths The depths of the merkle trees
   /// @param _coordinatorPubKey The coordinator's public key
   /// @param _extContracts The external contracts
   constructor(
     uint256 _duration,
-    uint256 _voteContextHash,
-    address _automatedVoteVerifier,
     MaxValues memory _maxValues,
     TreeDepths memory _treeDepths,
     PubKey memory _coordinatorPubKey,
@@ -124,10 +121,10 @@ contract Poll is Params, Utilities, SnarkCommon, Ownable, EmptyBallotRoots, IPol
     }
 
     // save the vote context hash
-    voteContextHash = _voteContextHash;
+    voteContextHash = 0;
 
     // setup the automated vote verifier
-    automatedVoteVerifier = IVerifier(_automatedVoteVerifier);
+    automatedVoteVerifier = new MockVerifier();
 
     // store the pub key as object then calculate the hash
     coordinatorPubKey = _coordinatorPubKey;
@@ -183,20 +180,18 @@ contract Poll is Params, Utilities, SnarkCommon, Ownable, EmptyBallotRoots, IPol
   }
 
   /// @notice Submits and verifies a delegator's vote
-  /// @param _currentVote The current vote
-  /// @param _currentVoteEnc The encrypted current vote
   /// @param _encVote Encrypted vote
   /// @param _proof zk-SNARK proof
-  /// @param userPublicKey User's public key
+  /// @param _toVoteFor User's address (the user who delegated the vote)
   function submitAutoDelegatorVote(
     uint256 _encVote,
-    uint256[5] calldata _proof,
+    uint256[8] calldata _proof,
     address _toVoteFor
   ) external isWithinVotingDeadline {
     // Ensure the delegator is registered
-    require(extContracts.maci.getDelegatorEmbdeingHashes(_toVoteFor) != 0, "Delegator not registered");
+    require(extContracts.maci.getDelegatorEmbeddingHash(_toVoteFor) != 0, "Delegator not registered");
 
-    uint256 delegatorHash = extContracts.maci.getDelegatorEmbdeingHashes(_toVoteFor);
+    uint256 delegatorEmbeddingHash = extContracts.maci.getDelegatorEmbeddingHash(_toVoteFor);
 
     DelegatorAI storage delegator = delegatorVotes[_toVoteFor];
 
@@ -204,23 +199,21 @@ contract Poll is Params, Utilities, SnarkCommon, Ownable, EmptyBallotRoots, IPol
     require(delegator.hasPersonallyVoted == 0, "Real user has already voted");
 
     // Verification logic...
-    require(
-      automatedVoteVerifier.verify(_proof, _encVote, voteContextHash, delegator.embeddingHash, userPublicKey),
-      "Vote verification failed"
-    );
+    uint256 _paramHash = uint256(keccak256(abi.encode(voteContextHash, delegatorEmbeddingHash, _encVote)));
+    VerifyingKey memory verifyingKey;
+    require(automatedVoteVerifier.verify(_proof, verifyingKey, _paramHash), "Vote verification failed");
 
     // Record the vote
     delegator.encVote = _encVote;
   }
 
   function getHashOfEncVotes() public view returns (uint256) {
-    bytes32 hashChain = keccak256(abi.encodePacked("")); // Initialize hash chain with an empty seed
+    uint256 hashChain = uint256(keccak256(abi.encodePacked(""))); // Initialize hash chain with an empty seed
+    address[] memory delegators = extContracts.maci.getDelegators();
+    for (uint256 i = 0; i < delegators.length; i++) {
+      address _address = delegators[i];
 
-    for (uint256 i = 0; i < extContracts.maci.withDelegators.length; i++) {
-      PubKey memory pubKey = extContracts.maci.withDelegators[i];
-      uint256 pubKeyHash = hashPubKey(pubKey);
-
-      DelegatorAI memory delegator = delegatorVotes[pubKeyHash];
+      DelegatorAI memory delegator = delegatorVotes[_address];
 
       // Consider only delegators who have voted
       // And whose owners did not vote
@@ -254,13 +247,8 @@ contract Poll is Params, Utilities, SnarkCommon, Ownable, EmptyBallotRoots, IPol
     emit TopupMessage(_message);
   }
 
-  /// @inheritdoc IPoll
-  /// TODO - how does the collusion resistance work? If I am colluded, and I publish a vote, and then publish a change Pbk,
-  /// TODO - these are different messages, and are visible that both were sent. Hence can be detected.
+  // @inheritdoc IPoll
   function publishMessage(Message memory _message, PubKey calldata _encPubKey) public virtual isWithinVotingDeadline {
-    // Hash the public key to get a unique identifier for the mapping
-    uint256 pubKeyHash = hashPubKey(_encPubKey);
-
     // Mark the delegator as having voted
     delegatorVotes[msg.sender].hasPersonallyVoted = 1;
 

@@ -55,7 +55,9 @@
     "merge": "hardhat merge",
     "prove": "hardhat prove",
     "deploy:localhost": "pnpm run deploy",
+    "deploy:base_sepolia": "pnpm run deploy --network base_sepolia",
     "deploy:sepolia": "pnpm run deploy --network sepolia",
+    "deploy:arbitrum_sepolia": "pnpm run deploy --network arbitrum_sepolia",
     "deploy:optimism-sepolia": "pnpm run deploy --network optimism_sepolia",
     "deploy-poll:localhost": "pnpm run deploy-poll",
     "deploy-poll:sepolia": "pnpm run deploy-poll --network sepolia",
@@ -66,8 +68,10 @@
     "prove:localhost": "pnpm run prove",
     "prove:sepolia": "pnpm run prove --network sepolia",
     "prove:optimism-sepolia": "pnpm run prove --network optimism_sepolia",
+    "verify:arbitrum_sepolia": "pnpm run verify --network arbitrum_sepolia",
     "verify:sepolia": "pnpm run verify --network sepolia",
-    "verify:optimism-sepolia": "pnpm run verify --network optimism_sepolia"
+    "verify:optimism-sepolia": "pnpm run verify --network optimism_sepolia",
+    "verify:base-sepolia": "pnpm run verify --network base_sepolia"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.5",

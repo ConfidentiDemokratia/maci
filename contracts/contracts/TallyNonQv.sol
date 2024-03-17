@@ -53,7 +53,7 @@ contract TallyNonQv is Ownable, SnarkCommon, CommonUtilities, Hasher {
   /// @param _vkRegistry The VkRegistry contract
   /// @param _poll The Poll contract
   /// @param _mp The MessageProcessor contract
-  constructor(address _verifier, address _vkRegistry, address _poll, address _mp) payable {
+  constructor(address _verifier, address _vkRegistry, address _poll, address _mp, address _autoTallyVerifier) payable {
     verifier = IVerifier(_verifier);
     vkRegistry = IVkRegistry(_vkRegistry);
     poll = IPoll(_poll);

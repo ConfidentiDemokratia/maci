@@ -13,7 +13,8 @@ contract SubsidyFactory is ITallySubsidyFactory {
     address _vkRegistry,
     address _poll,
     address _messageProcessor,
-    address _owner
+    address _owner,
+    address _autoTallyVerifier
   ) public returns (address subsidyAddr) {
     /// @notice deploy Subsidy for this Poll
     Subsidy subsidy = new Subsidy(_verifier, _vkRegistry, _poll, _messageProcessor);

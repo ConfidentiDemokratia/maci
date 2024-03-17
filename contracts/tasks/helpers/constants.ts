@@ -4,6 +4,8 @@
 export enum ESupportedChains {
   Sepolia = "sepolia",
   OptimismSepolia = "optimism_sepolia",
+  ArbitrumSepolia = "arbitrum_sepolia",
+  BaseSepolia = "base_sepolia",
   Coverage = "coverage",
   Hardhat = "hardhat",
 }
@@ -14,6 +16,8 @@ export enum ESupportedChains {
 export enum EChainId {
   Hardhat = 31337,
   OptimismSepolia = 11155420,
+  BaseSepolia = 84532,
+  ArbitrumSepolia = 421614,
   Sepolia = 11155111,
   Coverage = 1337,
 }
@@ -34,7 +38,9 @@ const gasPrice = (value: number) => value * GWEI;
  * Gas price settings for supported network
  */
 export const NETWORKS_DEFAULT_GAS: Record<ESupportedChains, number | "auto"> = {
+  [ESupportedChains.BaseSepolia]: gasPrice(1),
   [ESupportedChains.Sepolia]: gasPrice(1),
+  [ESupportedChains.ArbitrumSepolia]: gasPrice(1),
   [ESupportedChains.OptimismSepolia]: gasPrice(1),
   [ESupportedChains.Coverage]: gasPrice(1),
   [ESupportedChains.Hardhat]: gasPrice(1),
@@ -50,6 +56,8 @@ export const getNetworkRpcUrls = (): Record<ESupportedChains, string> => {
 
   return {
     [ESupportedChains.Sepolia]: `https://sepolia.infura.io/v3/${INFURA_KEY}`,
+    [ESupportedChains.ArbitrumSepolia]: `https://arbitrum-sepolia.infura.io/v3/${INFURA_KEY}`,
+    [ESupportedChains.BaseSepolia]: "https://rpc.notadegen.com/base/sepolia",
     [ESupportedChains.OptimismSepolia]: `https://optimism-sepolia.infura.io/v3/${INFURA_KEY}`,
     [ESupportedChains.Coverage]: "http://localhost:8555",
     [ESupportedChains.Hardhat]: "http://localhost:8545",
@@ -58,6 +66,8 @@ export const getNetworkRpcUrls = (): Record<ESupportedChains, string> => {
 
 export const getEtherscanApiKeys = (): Record<ESupportedChains, string | undefined> => ({
   [ESupportedChains.Sepolia]: process.env.ETH_ETHERSCAN_API_KEY,
+  [ESupportedChains.BaseSepolia]: process.env.BASE_ETHERSCAN_API_KEY,
+  [ESupportedChains.ArbitrumSepolia]: process.env.ARBITRUM_ETHERSCAN_API_KEY,
   [ESupportedChains.OptimismSepolia]: process.env.OPTIMISM_ETHERSCAN_API_KEY,
   [ESupportedChains.Coverage]: undefined,
   [ESupportedChains.Hardhat]: undefined,

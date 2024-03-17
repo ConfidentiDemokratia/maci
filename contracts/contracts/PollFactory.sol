@@ -27,8 +27,6 @@ contract PollFactory is Params, DomainObjs, IPollFactory {
   /// @inheritdoc IPollFactory
   function deploy(
     uint256 _duration,
-    uint256 _voteContextHash,
-    address _automatedVoteVerifier,
     MaxValues calldata _maxValues,
     TreeDepths calldata _treeDepths,
     PubKey calldata _coordinatorPubKey,
@@ -40,32 +38,33 @@ contract PollFactory is Params, DomainObjs, IPollFactory {
     /// maxVoteOptions must be less than 2 ** 50 due to circuit limitations;
     /// it will be packed as a 50-bit value along with other values as one
     /// of the inputs (aka packedVal)
-    if (_maxValues.maxVoteOptions >= (2 ** 50)) {
-      revert InvalidMaxValues();
-    }
+    // if (_maxValues.maxVoteOptions >= (2 ** 50)) {
+    //   revert InvalidMaxValues();
+    // }
 
-    /// @notice deploy a new AccQueue contract to store messages
-    AccQueue messageAq = new AccQueueQuinaryMaci(_treeDepths.messageTreeSubDepth);
+    // /// @notice deploy a new AccQueue contract to store messages
+    // AccQueue messageAq = new AccQueueQuinaryMaci(_treeDepths.messageTreeSubDepth);
 
-    /// @notice the smart contracts that a Poll would interact with
-    ExtContracts memory extContracts = ExtContracts({
-      maci: IMACI(_maci),
-      messageAq: messageAq,
-      topupCredit: _topupCredit
-    });
+    // /// @notice the smart contracts that a Poll would interact with
+    // ExtContracts memory extContracts = ExtContracts({
+    //   maci: IMACI(_maci),
+    //   messageAq: messageAq,
+    //   topupCredit: _topupCredit
+    // });
 
-    // deploy the poll
-    Poll poll = new Poll(_duration, _voteContextHash, _automatedVoteVerifier, _maxValues, _treeDepths, _coordinatorPubKey, extContracts);
+    // // deploy the poll
+    // Poll poll = new Poll(_duration, _maxValues, _treeDepths, _coordinatorPubKey, extContracts);
 
-    // Make the Poll contract own the messageAq contract, so only it can
-    // run enqueue/merge
-    messageAq.transferOwnership(address(poll));
+    // // Make the Poll contract own the messageAq contract, so only it can
+    // // run enqueue/merge
+    // messageAq.transferOwnership(address(poll));
 
-    // init Poll
-    poll.init();
+    // // init Poll
+    // poll.init();
 
-    poll.transferOwnership(_pollOwner);
+    // poll.transferOwnership(_pollOwner);
 
-    pollAddr = address(poll);
+    // pollAddr = address(poll);
+    return address(0);
   }
 }

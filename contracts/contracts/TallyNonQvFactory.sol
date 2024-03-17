@@ -13,10 +13,11 @@ contract TallyNonQvFactory is ITallySubsidyFactory {
     address _vkRegistry,
     address _poll,
     address _messageProcessor,
-    address _owner
+    address _owner,
+    address _autoTallyVerifier
   ) public virtual returns (address tallyAddr) {
     // deploy Tally for this Poll
-    TallyNonQv tally = new TallyNonQv(_verifier, _vkRegistry, _poll, _messageProcessor);
+    TallyNonQv tally = new TallyNonQv(_verifier, _vkRegistry, _poll, _messageProcessor, _autoTallyVerifier);
     tally.transferOwnership(_owner);
     tallyAddr = address(tally);
   }

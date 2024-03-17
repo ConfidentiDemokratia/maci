@@ -26,7 +26,7 @@ deployment
     const poseidonT6ContractAddress = storage.mustGetAddress(EContracts.PoseidonT6, hre.network.name);
 
     const linkedPollFactoryContract = await deployment.linkPoseidonLibraries(
-      EContracts.PollFactory,
+      EContracts.MessageProcessorFactory,
       poseidonT3ContractAddress,
       poseidonT4ContractAddress,
       poseidonT5ContractAddress,
